@@ -256,7 +256,8 @@ app.get(
     `
 
     const result = await db.all(getUserNameWhoLikedTheTweet)
-    if (result.length === 0 || result === null) {
+    console.log(result)
+    if (result === undefined || result.length === 0) {
       response.status(401).send('Invalid Request')
     } else {
       response.status(200).send(result)
@@ -295,17 +296,21 @@ app.get(
             WHERE 
             u2.username LIKE '${username}'
           )
-        )
+        );
 
      `
+
     const result = await db.all(getWhoReplies)
     console.log(result)
+    let replies = []
+    const spreadingResult = () => {
+      result.map(eachObj => replies.push(eachObj))
+    }
     if (result === null || result.length === 0) {
       response.status(401)
       response.send('Invalid Request')
     } else {
-      let replies = []
-      result.map(eachObj => replies.push(eachObj))
+      spreadingResult()
       response.send({
         replies,
       })

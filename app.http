@@ -15,7 +15,7 @@ Content-Type: application/json
 
 {
   "username":"JoeBiden",
-  "password":"biden@12"
+  "password":"biden@123"
 }
 
 ###
@@ -34,7 +34,7 @@ GET http://localhost:3000/user/followers/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNzE3NTA3MDQ1fQ.l0qCNVYaHG3pxpCU2EhmvbrklcjVmGjZmJHmrKkFsuk
 ###
 
-GET http://localhost:3000/tweets/12/
+GET http://localhost:3000/tweets/1/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNzE3NTA3MDQ1fQ.l0qCNVYaHG3pxpCU2EhmvbrklcjVmGjZmJHmrKkFsuk
 ###
 

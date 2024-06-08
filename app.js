@@ -115,160 +115,105 @@ app.post('/login/', async (request, response) => {
 
 app.get('/user/tweets/feed/', authenticateToken, async (request, response) => {
   const {username} = request
-  const getTweetFeed = `
-  SELECT 
+  const getUserFollowsTweet = `
+  SELECT
   user.username,
   tweet.tweet,
-  tweet.date_time
+  tweet.date_time as dateTime
   FROM
-  follower INNER JOIN tweet ON
-   follower.follower_user_id = tweet.user_id
-   INNER JOIN user ON user.user_id = tweet.user_id
-   WHERE
-   follower.following_user_id IN (
-                                    SELECT 
-                                    follower.following_user_id
-                                    FROM
-                                    follower INNER JOIN user 
-                                    ON follower.follower_user_id = user.user_id
-                                    WHERE 
-                                    user.username LIKE '${username}')
-                                    AND NOT user.user_id = (
-                                      SELECT
-                                      user_id
-                                      FROM
-                                      user
-                                      WHERE 
-                                      username like '${username}'
-                                    )
+  user INNER JOIN tweet ON user.user_id = tweet.user_id 
+  WHERE
+  user.user_id IN (SELECT 
+                   f.following_user_id 
+                   FROM
+                   follower AS f INNER JOIN user AS u2
+                   ON f.follower_user_id = u2.user_id
+                   WHERE
+                   u2.username LIKE '${username}')
+                   ORDER BY
+                   dateTime DESC
+                   LIMIT 4;
+  `
 
-    ORDER BY 
-    date_time DESC
-    LIMIT 4;`
-  const result = await db.all(getTweetFeed)
-  response.send(
-    result.map(each => {
-      return {
-        username: each.username,
-        tweet: each.tweet,
-        dateTime: each.date_time,
-      }
-    }),
-  )
+  const result = await db.all(getUserFollowsTweet)
+  response.send(result)
 })
 
 app.get('/user/following/', authenticateToken, async (request, response) => {
   const {username} = request
-  const getUserName = `
-  SELECT DISTINCT
-  user.username
+  const getUserFollowingName = `
+  SELECT
+  user.username AS name
   FROM
-  follower INNER JOIN tweet ON
-   follower.follower_user_id = tweet.user_id
-   INNER JOIN user ON user.user_id = tweet.user_id
-   WHERE
-   follower.following_user_id IN (
-                                    SELECT 
-                                    follower.following_user_id
-                                    FROM
-                                    follower INNER JOIN user 
-                                    ON follower.follower_user_id = user.user_id
-                                    WHERE 
-                                    user.username LIKE '${username}')
-                                     AND NOT user.user_id = (
-                                      SELECT
-                                      user_id
-                                      FROM
-                                      user
-                                      WHERE 
-                                      username like '${username}'
-                                    );`
-
-  const result = await db.all(getUserName)
-  console.log(result)
-  response.send(
-    result.map(each => {
-      return {
-        name: each.username,
-      }
-    }),
+  user
+  WHERE
+  user.user_id IN (
+    SELECT
+    f.following_user_id
+    FROM 
+    follower AS f INNER JOIN user as u2 
+    ON 
+    f.follower_user_id = u2.user_id 
+    WHERE 
+    u2.username LIKE '${username}'
   )
+  `
+
+  const result = await db.all(getUserFollowingName)
+  response.send(result)
 })
 
 app.get('/user/followers/', authenticateToken, async (request, response) => {
   const {username} = request
-  const getUserName = `
-  SELECT DISTINCT
-  user.username
+  const getUserFollowersNames = `
+  SELECT
+  user.username AS name
   FROM
-  follower INNER JOIN user 
-  ON 
-  user.user_id = follower.following_user_id
-   WHERE
-   follower.follower_user_id IN (
-                                    SELECT 
-                                    follower.follower_user_id
-                                    FROM
-                                    follower INNER JOIN user 
-                                    ON follower.following_user_id = user.user_id
-                                    WHERE 
-                                    user.username LIKE '${username}')
-                                     AND NOT user.user_id = (
-                                      SELECT
-                                      user_id
-                                      FROM
-                                      user
-                                      WHERE 
-                                      username like '${username}'
-                                    );`
+  user
+  WHERE
+  user_id IN (
+    SELECT
+    f.follower_user_id
+    FROM
+    follower AS f INNER JOIN user AS u2 
+    ON 
+    f.following_user_id = u2.user_id 
+    WHERE
+    u2.username LIKE '${username}'
+  );
+  `
 
-  const result = await db.all(getUserName)
-  console.log(result)
-  response.send(
-    result.map(each => {
-      return {
-        name: each.username,
-      }
-    }),
-  )
+  const result = await db.all(getUserFollowersNames)
+  response.send(result)
 })
 
 app.get('/tweets/:tweetId/', authenticateToken, async (request, response) => {
   const {username} = request
   const {tweetId} = request.params
-  const getUserName = `
-  SELECT 
-  tweet.tweet,
-  count(like.like_id) as likes,
-  count(reply.reply_id) as replies,
-  tweet.date_time as dateTime
+  const getTweetOfUserFollows = `
+  SELECT
+  t.tweet,
+  count(l.like_id) as likes,
+  count(r.reply_id) as replies,
+  t.date_time as dateTime
   FROM
-  follower INNER JOIN tweet ON
-   follower.follower_user_id = tweet.user_id
-   LEFT JOIN reply ON reply.tweet_id = tweet.tweet_id
-   LEFT JOIN like ON tweet.tweet_id = like.tweet_id 
-   INNER JOIN user ON user.user_id = tweet.tweet_id
-   WHERE
-   follower.following_user_id IN (
-                                    SELECT 
-                                    follower.following_user_id
-                                    FROM
-                                    follower INNER JOIN tweet 
-                                    ON follower.follower_user_id = tweet.user_id
-                                    INNER JOIN user ON tweet.user_id = user.user_id
-                                    WHERE                                 
-                                    user.username LIKE '${username}' )
-                                    AND tweet.tweet_id = '${tweetId}'
-                                     AND NOT user.user_id = (
-                                      SELECT
-                                      user_id
-                                      FROM
-                                      user
-                                      WHERE 
-                                      username like '${username}'
-                                    );`
-
-  const result = await db.get(getUserName)
+  tweet AS t LEFT JOIN like AS l ON 
+  t.tweet_id = l.tweet_id LEFT JOIN reply AS r
+  ON t.tweet_id = r.tweet_id  
+  WHERE 
+  t.tweet_id = '${tweetId}'
+  AND 
+  t.user_id IN (
+    SELECT
+    f.following_user_id
+    FROM
+    follower AS f INNER JOIN user AS u2 ON 
+    f.follower_user_id = u2.user_id 
+    WHERE
+    u2.username LIKE '${username}'
+  )
+  `
+  const result = await db.get(getTweetOfUserFollows)
   if (result.tweet === null) {
     response.status(401)
     response.send('Invalid Request')
@@ -283,49 +228,38 @@ app.get(
   async (request, response) => {
     const {username} = request
     const {tweetId} = request.params
-    const getWhoLikedTweet = `
-     SELECT 
-    DISTINCT u.username 
-     FROM
-     user as u INNER JOIN tweet as t ON 
-     u.user_id = t.user_id INNER JOIN follower as f ON 
-     t.user_id = f.follower_user_id INNER JOIN like as l ON 
-     t.tweet_id = l.tweet_id
-     WHERE 
-     t.tweet_id = '${tweetId}'
-     AND
-     f.follower_user_id IN (
-                  SELECT
-                  follower_user_id
-                  FROM
-                  follower
-                  WHERE 
-                  following_user_id IN (
-                   SELECT
-                   f.following_user_id
-                   FROM
-                   user as u INNER JOIN follower as f
-                   ON u.user_id = f.follower_user_id 
-                   WHERE 
-                   u.username LIKE '${username}'
-                  )
-     )
-  `
+    const getUserNameWhoLikedTheTweet = `
+    SELECT 
+    user.username 
+    FROM
+    user
+    WHERE 
+    user.user_id IN (
+      SELECT
+      l.user_id
+      FROM
+      like AS l INNER JOIN tweet AS t ON 
+      l.tweet_id = t.tweet_id 
+      WHERE 
+      t.tweet_id = '${tweetId}'
+      AND 
+      t.user_id IN (
+        SELECT
+        f.following_user_id
+        FROM
+        follower AS f INNER JOIN user AS u ON
+        f.follower_user_id = u.user_id 
+        WHERE
+        u.username LIKE '${username}'
+      )
+    );
+    `
 
-    const result = await db.all(getWhoLikedTweet)
-    console.log(result)
-    let namesArray = []
-    result.map(eachItem => {
-      namesArray.push(eachItem.username)
-    })
-    console.log(namesArray)
-    if (result.length === 0) {
-      response.status(401)
-      response.send('Invalid Request')
+    const result = await db.all(getUserNameWhoLikedTheTweet)
+    if (result.length === 0 || result === null) {
+      response.status(401).send('Invalid Request')
     } else {
-      response.send({
-        likes: namesArray,
-      })
+      response.status(200).send(result)
     }
   },
 )
@@ -337,40 +271,44 @@ app.get(
     const {tweetId} = request.params
     const {username} = request
     const getWhoReplies = `
-  SELECT DISTINCT
-  u.username as name,
-  r.reply as reply 
-  FROM
-  reply as r INNER JOIN tweet as t 
-  ON r.tweet_id = t.tweet_id INNER JOIN follower as f 
-  ON f.follower_user_id = t.user_id INNER JOIN user as u 
-  ON t.user_id = u.user_id
-  WHERE 
-  t.tweet_id = '${tweetId}'
-  AND
-  f.follower_user_id IN (
-                  SELECT
-                  follower_user_id
-                  FROM
-                  follower
-                  WHERE 
-                  following_user_id IN (
-                   SELECT
-                   f.following_user_id
-                   FROM
-                   user as u INNER JOIN follower as f
-                   ON u.user_id = f.follower_user_id 
-                   WHERE 
-                   u.username LIKE '${username}'
-                  )
-  )
-  `
+        SELECT
+        u.username AS name,
+        r.reply AS reply 
+        FROM
+        reply AS r NATURAL JOIN user AS u 
+        NATURAL JOIN tweet AS t
+        WHERE
+        t.tweet_id = '${tweetId}'
+        AND 
+        t.user_id IN (
+          SELECT
+          follower_user_id 
+          FROM
+          follower 
+          WHERE
+          following_user_id IN (
+            SELECT 
+            f2.following_user_id
+            FROM
+            follower AS f2 INNER JOIN user AS u2 ON 
+            f2.follower_user_id = u2.user_id 
+            WHERE 
+            u2.username LIKE '${username}'
+          )
+        )
+
+     `
     const result = await db.all(getWhoReplies)
+    console.log(result)
     if (result === null || result.length === 0) {
       response.status(401)
       response.send('Invalid Request')
     } else {
-      response.send(result)
+      let replies = []
+      result.map(eachObj => replies.push(eachObj))
+      response.send({
+        replies,
+      })
     }
   },
 )
@@ -412,40 +350,34 @@ app.delete(
   async (request, response) => {
     const {tweetId} = request.params
     const {username} = request
-    const getUserTweet = `
-    SELECT
-    t.tweet_id
-    FROM
-    user as u JOIN tweet as t ON 
-    u.user_id = t.tweet_id
-    WHERE 
-    u.username LIKE '${username}'
-    AND t.tweet_id = '${tweetId}';
-    `
-    const usedetails = await db.get(getUserTweet)
-    console.log(usedetails)
-    if (usedetails === undefined) {
-      response.status(401)
-      response.send('Invalid Request')
-    } else {
-      const deletingTweets = `
-    DELETE FROM
-    tweet 
-    WHERE 
-    tweet_id = (
-      SELECT 
-      t.tweet_id
+    const checkTweet = `
+     SELECT
+     tweet 
+     FROM
+     tweet
+     WHERE
+     tweet_id = '${tweetId}'
+     AND 
+     user_id = (
+      SELECT
+      user_id
       FROM
-      tweet as t INNER JOIN user as u ON 
-      u.user_id = t.user_id 
+      user
+      WHERE
+      user.username LIKE '${username}'
+     );
+  `
+    const result = await db.get(checkTweet)
+    if (result === undefined) {
+      response.status(401).send('Invalid Request')
+    } else {
+      const deletingQuery = ` 
+      DELETE FROM
+      tweet
       WHERE 
-      u.username LIKE '${username}'
-      AND 
-      t.tweet_id = '${tweetId}'
-    )
-    ;
-    `
-      await db.run(deletingTweets)
+      tweet_id = '${tweetId}';
+      `
+      await db.run(deletingQuery)
       response.send('Tweet Removed')
     }
   },

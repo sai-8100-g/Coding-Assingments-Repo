@@ -34,16 +34,16 @@ GET http://localhost:3000/user/followers/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNzE3NTA3MDQ1fQ.l0qCNVYaHG3pxpCU2EhmvbrklcjVmGjZmJHmrKkFsuk
 ###
 
-GET http://localhost:3000/tweets/4/
+GET http://localhost:3000/tweets/12/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNzE3NTA3MDQ1fQ.l0qCNVYaHG3pxpCU2EhmvbrklcjVmGjZmJHmrKkFsuk
 ###
 
 
-GET http://localhost:3000/tweets/15/likes/
+GET http://localhost:3000/tweets/3/likes/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNzE3NTA3MDQ1fQ.l0qCNVYaHG3pxpCU2EhmvbrklcjVmGjZmJHmrKkFsuk
 ###
 
-GET http://localhost:3000/tweets/2/replies/
+GET http://localhost:3000/tweets/1/replies/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNzE3NTA3MDQ1fQ.l0qCNVYaHG3pxpCU2EhmvbrklcjVmGjZmJHmrKkFsuk
 ###
 

@@ -143,7 +143,7 @@ app.get('/user/following/', authenticateToken, async (request, response) => {
   const {username} = request
   const getUserFollowingName = `
   SELECT
-  user.username AS name
+  user.name
   FROM
   user
   WHERE
@@ -167,7 +167,7 @@ app.get('/user/followers/', authenticateToken, async (request, response) => {
   const {username} = request
   const getUserFollowersNames = `
   SELECT
-  user.username AS name
+  user.name 
   FROM
   user
   WHERE
@@ -192,29 +192,28 @@ app.get('/tweets/:tweetId/', authenticateToken, async (request, response) => {
   const {tweetId} = request.params
   const getTweetOfUserFollows = `
   SELECT
-  t.tweet,
-  count(l.like_id) as likes,
-  count(r.reply_id) as replies,
-  t.date_time as dateTime
+  tweet,
+  (SELECT COUNT(*) FROM like WHERE tweet_id = tweet.tweet_id) AS likes,
+  (SELECT COUNT(*) FROM reply WHERE tweet_id = tweet.tweet_id) AS replies,
+  date_time AS dateTime
   FROM
-  tweet AS t LEFT JOIN like AS l ON 
-  t.tweet_id = l.tweet_id LEFT JOIN reply AS r
-  ON t.tweet_id = r.tweet_id  
-  WHERE 
-  t.tweet_id = '${tweetId}'
+  tweet
+  WHERE
+  tweet_id = '${tweetId}'
   AND 
-  t.user_id IN (
+  user_id IN (
     SELECT
     f.following_user_id
     FROM
-    follower AS f INNER JOIN user AS u2 ON 
-    f.follower_user_id = u2.user_id 
-    WHERE
-    u2.username LIKE '${username}'
+    follower as f INNER JOIN user as u ON 
+    f.follower_user_id = u.user_id 
+    WHERE 
+    u.username LIKE '${username}'
   )
   `
   const result = await db.get(getTweetOfUserFollows)
-  if (result.tweet === null) {
+  console.log(result)
+  if (result === undefined || result.length === 0) {
     response.status(401)
     response.send('Invalid Request')
   } else {
@@ -232,24 +231,24 @@ app.get(
     SELECT 
     user.username 
     FROM
-    user
+    like NATURAL JOIN user 
     WHERE 
-    user.user_id IN (
+    like.tweet_id = '${tweetId}'
+    AND 
+    like.tweet_id IN ( 
       SELECT
-      l.user_id
+      tweet_id
       FROM
-      like AS l INNER JOIN tweet AS t ON 
-      l.tweet_id = t.tweet_id 
+      tweet 
       WHERE 
-      t.tweet_id = '${tweetId}'
-      AND 
-      t.user_id IN (
+      user_id  IN ( 
         SELECT
-        f.following_user_id
+        f.following_user_id 
         FROM
-        follower AS f INNER JOIN user AS u ON
+        follower as f INNER JOIN user as u 
+        ON 
         f.follower_user_id = u.user_id 
-        WHERE
+        WHERE 
         u.username LIKE '${username}'
       )
     );
@@ -260,7 +259,8 @@ app.get(
     if (result === undefined || result.length === 0) {
       response.status(401).send('Invalid Request')
     } else {
-      response.status(200).send(result)
+      let likes = [...result]
+      response.status(200).send(likes)
     }
   },
 )
@@ -273,7 +273,7 @@ app.get(
     const {username} = request
     const getWhoReplies = `
         SELECT
-        u.username AS name,
+        u.username,
         r.reply AS reply 
         FROM
         reply AS r NATURAL JOIN user AS u 
@@ -282,20 +282,14 @@ app.get(
         t.tweet_id = '${tweetId}'
         AND 
         t.user_id IN (
-          SELECT
-          follower_user_id 
+          SELECT 
+          f.following_user_id
           FROM
-          follower 
+          follower as f JOIN user as u 
+          ON
+          f.follower_user_id = u.user_id 
           WHERE
-          following_user_id IN (
-            SELECT 
-            f2.following_user_id
-            FROM
-            follower AS f2 INNER JOIN user AS u2 ON 
-            f2.follower_user_id = u2.user_id 
-            WHERE 
-            u2.username LIKE '${username}'
-          )
+          u.username LIKE '${username}'
         );
 
      `
@@ -321,18 +315,22 @@ app.get(
 app.get('/user/tweets/', authenticateToken, async (request, response) => {
   const {username} = request
   const getUserTweets = `
-  SELECT
-  t.tweet,
-  count(l.like_id) as likes,
-  count(r.reply_id) as replies,
-  t.date_time as dateTime
+  SELECT 
+  tweet,
+  (SELECT COUNT(*) FROM like WHERE tweet_id = tweet.tweet_id) AS likes,
+  (SELECT COUNT(*) FROM reply WHERE tweet_id = tweet.tweet_id) AS replies,
+  date_time AS dateTime
   FROM
-  user as u INNER JOIN tweet as t 
-  ON u.user_id = t.user_id LEFT JOIN 
-  like as l ON t.tweet_id = l.tweet_id 
-  LEFT JOIN reply as r ON r.tweet_id = r.tweet_id
- WHERE
- u.username LIKE '${username}'
+  tweet
+  WHERE
+  user_id = (
+      SELECT
+      user_id 
+      FROM 
+      user
+      WHERE 
+      user.username LIKE '${username}'
+  );
   `
   const result = await db.all(getUserTweets)
   response.send(result)
